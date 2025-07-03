@@ -1,29 +1,42 @@
-name: Node.js CI
+name: Deploy to VPS
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-  build:
+  deploy:
+    runs-on: ubuntu-latest
 
-    runs-on: self-hosted
-
-    strategy:
-      matrix:
-        node-version: [18.19.1]
-
-    env:
-      NEXT_WEBSITE_URL: ${{ secrets.NEXT_WEBSITE_URL }}
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    - run: pnpm install
-    - run: pnpm run build
-    - name: Change Directory
-      run: cd /home/uton/actions-runner/_work/capstonelatest/capstonelatest
-    - run: pm2 restart 0
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build Next.js
+        run: pnpm run build
+
+      - name: Copy Files to VPS
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          port: ${{ secrets.PORT }}
+          key: ${{ secrets.KEY }}
+          source: ".next,public,package.json,package-lock.json"
+          target: "/var/www/capstonelatest"
+
+      - name: Run Deploy Script on VPS
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          port: ${{ secrets.PORT }}
+          key: ${{ secrets.KEY }}
+          script: |
+            cd /var/www/capstonelatest
+            pnpm install
+            pm2 restart capstonelatest || pm2 start npm --name "capstonelatest" -- start
