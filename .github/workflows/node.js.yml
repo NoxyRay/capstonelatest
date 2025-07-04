@@ -39,4 +39,4 @@ jobs:
           script: |
             cd /var/www/capstonelatest
             pnpm install
-            pm2 restart capstonelatest || pm2 start npm --name "capstonelatest" -- start
+            pm2 restart capstone || pm2 start pnpm --name "capstone" -- start
